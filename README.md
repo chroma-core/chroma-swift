@@ -1,3 +1,7 @@
+>  :warning: *Chroma Swift is currently in Beta*
+> 
+> This means that the core APIs work well - but we are still gaining full confidence over all possible edge cases.
+
 # Chroma Swift Package
 
 Chroma is a Swift package that provides a high-performance, cross-platform interface for working with vector stores and embeddings collections, backed by the [Chroma](https://github.com/chroma-core/chroma) database engine. It is designed for use in macOS and iOS applications, supporting both Apple Silicon and Intel architectures.
