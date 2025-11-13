@@ -24,20 +24,45 @@ final class ChromaState {
 }
 
 extension ChromaState {
-    
+
     func addLog(_ message: String) {
-        logs.append("[\(Date().formatted(date: .omitted, time: .standard))] \(message)")
+        let entry = "[\(Date().formatted(date: .omitted, time: .standard))] \(message)"
+        logs.append(entry)
     }
     
     func refreshCollections() {
         do {
-            collections = try listCollections()
-            self.addLog("Found \(collections.count) collections:")
-            collections.forEach { collection in
+            let names = try listCollections()
+            collections = names
+            self.addLog("Found \(names.count) collections:")
+            names.forEach { collection in
                 self.addLog("\(collection)")
             }
         } catch {
             self.addLog("Failed to list collections: \(error)")
+        }
+    }
+    
+    func logAllCollectionIds() {
+        do {
+            let names = try listCollections()
+            guard !names.isEmpty else {
+                addLog("No collections found.")
+                return
+            }
+            
+            addLog("Fetching IDs for \(names.count) collection(s)...")
+            for name in names {
+                do {
+                    let info = try Chroma.getCollection(collectionName: name)
+                    addLog("• \(name): \(info.collectionId)")
+                } catch {
+                    addLog("• \(name): failed to fetch info (\(error))")
+                }
+            }
+            addLog("Finished fetching collection IDs.")
+        } catch {
+            addLog("Failed to list collections before fetching IDs: \(error)")
         }
     }
     
@@ -56,9 +81,7 @@ extension ChromaState {
         try self.initializeWithPath(path: persistentPath, allowReset: true)
         isPersistentInitialized = true
         
-        DispatchQueue.main.async { [weak self] in
-            self?.logs.removeAll()
-        }
+        logs.removeAll()
     }
     
     func debugFullReset() throws {
@@ -144,7 +167,7 @@ extension ChromaState {
         // 3. Add them to the database
         // Example:
         
-        Task {
+        Task { @MainActor in
             await self.processScreenshots()
         }
     }
