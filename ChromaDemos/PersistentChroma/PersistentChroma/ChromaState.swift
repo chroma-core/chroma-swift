@@ -43,26 +43,38 @@ extension ChromaState {
         }
     }
     
-    func logAllCollectionIds() {
+    func logAllCollectionIds() async {
         do {
-            let names = try listCollections()
+            let names = try await runBlocking { try listCollections() }
             guard !names.isEmpty else {
-                addLog("No collections found.")
+                await MainActor.run { addLog("No collections found.") }
                 return
             }
             
-            addLog("Fetching IDs for \(names.count) collection(s)...")
+            await MainActor.run {
+                addLog("Fetching IDs for \(names.count) collection(s)...")
+            }
             for name in names {
                 do {
-                    let info = try Chroma.getCollection(collectionName: name)
-                    addLog("• \(name): \(info.collectionId)")
+                    let info = try await runBlocking {
+                        try Chroma.getCollection(collectionName: name)
+                    }
+                    await MainActor.run {
+                        addLog("• \(name): \(info.collectionId)")
+                    }
                 } catch {
-                    addLog("• \(name): failed to fetch info (\(error))")
+                    await MainActor.run {
+                        addLog("• \(name): failed to fetch info (\(error))")
+                    }
                 }
             }
-            addLog("Finished fetching collection IDs.")
+            await MainActor.run {
+                addLog("Finished fetching collection IDs.")
+            }
         } catch {
-            addLog("Failed to list collections before fetching IDs: \(error)")
+            await MainActor.run {
+                addLog("Failed to list collections before fetching IDs: \(error)")
+            }
         }
     }
     
@@ -214,5 +226,18 @@ extension ChromaState {
     
     func deleteAllDocumentsFromCollection(collectionName: String) throws {
         try deleteDocuments(collectionName: collectionName, documentIds: nil)
+    }
+    
+    private func runBlocking<T>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let result = try work()
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
 }

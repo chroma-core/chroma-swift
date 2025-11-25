@@ -51,8 +51,8 @@ struct DatabaseControlsView: View {
                 }
 
                 ActionButton(title: "Print Collection IDs", disabled: !state.isPersistentInitialized) {
-                    self.focused = false
-                    state.logAllCollectionIds()
+                    await MainActor.run { self.focused = false }
+                    await state.logAllCollectionIds()
                 }
 
                 ActionButton(title: "Get All Documents", disabled: !state.isPersistentInitialized || state.collections.isEmpty) {
