@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/chroma-core/chroma-swift.git",
       "state" : {
-        "revision" : "6bf53b17e46259690b1a8840cec0f8dced6b9f1d",
-        "version" : "1.0.0"
+        "revision" : "f664500adffd4931744568640a2650ac042daefb",
+        "version" : "1.0.1"
       }
     },
     {
