@@ -1,3 +1,20 @@
+#!/bin/bash
+set -euo pipefail
+SCRIPT_DIR=$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd)
+TARGET_PKG="$ROOT/Package.swift"
+
+# Intentionally no baked-in defaults; pass URL + checksum explicitly.
+if [[ $# -lt 2 ]]; then
+  echo "usage: $0 <framework-zip-url> <checksum>" >&2
+  echo "tip: after you publish a new release, update this script with fresh defaults if you want them" >&2
+  exit 1
+fi
+
+URL="$1"
+CHECKSUM="$2"
+
+cat > "$TARGET_PKG" <<EOF
 // swift-tools-version:5.9
 import PackageDescription
 
@@ -33,7 +50,10 @@ let package = Package(
         ),
         .binaryTarget(
             name: "chroma_swiftFFI",
-            path: "../chroma/rust/swift_bindings/Chroma/chroma_swift_framework.xcframework"
+            url: "$URL",
+            checksum: "$CHECKSUM"
         )
     ]
 )
+EOF
+echo "Package.swift restored to use the published XCFramework (url=$URL)."
