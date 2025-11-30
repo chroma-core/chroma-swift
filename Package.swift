@@ -33,7 +33,8 @@ let package = Package(
         ),
         .binaryTarget(
             name: "chroma_swiftFFI",
-            path: "../chroma/rust/swift_bindings/Chroma/chroma_swift_framework.xcframework"
+            url: "https://github.com/chroma-core/chroma-swift/releases/download/untagged-9bb63757553b689712e7/chroma_swift_framework.xcframework.zip",
+            checksum: "d438e2d46544947c59261fda17b2640c9b452e3afbdcdd3d1b2c28bee82c3d51"
         )
     ]
 )
