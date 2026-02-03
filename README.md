@@ -196,6 +196,7 @@ let results = try await embedder.queryCollection(collectionName, queryText: "sim
 - `addDocuments(collectionName: String, ids: [String], embeddings: [[Float]], documents: [String], metadatas: [ChromaMetadata?]? = nil) -> UInt32`
   
   Adds documents with embeddings and optional metadata to a collection.
+  Note: this currently returns `1` on success regardless of the number of documents; use `countDocuments` if you need the actual count.
 
 - `getAllDocuments(collectionName: String) -> GetResult`
   
