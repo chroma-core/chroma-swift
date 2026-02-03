@@ -572,12 +572,12 @@ public struct FfiConverterTypeAdvancedGetResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AdvancedGetResult {
         return
             try AdvancedGetResult(
-                ids: FfiConverterSequenceString.read(from: &buf), 
-                embeddings: FfiConverterOptionSequenceSequenceFloat.read(from: &buf), 
-                documents: FfiConverterOptionSequenceOptionString.read(from: &buf), 
-                metadatas: FfiConverterOptionSequenceOptionString.read(from: &buf), 
+                ids: FfiConverterSequenceString.read(from: &buf),
+                embeddings: FfiConverterOptionSequenceSequenceFloat.read(from: &buf),
+                documents: FfiConverterOptionSequenceOptionString.read(from: &buf),
+                metadatas: FfiConverterOptionSequenceOptionString.read(from: &buf),
                 uris: FfiConverterOptionSequenceOptionString.read(from: &buf)
-        )
+            )
     }
 
     public static func write(_ value: AdvancedGetResult, into buf: inout [UInt8]) {
@@ -637,7 +637,7 @@ extension CollectionInfo: Equatable, Hashable {
         }
         return true
     }
-
+    
     public func hash(into hasher: inout Hasher) {
         hasher.combine(name)
         hasher.combine(collectionId)
@@ -654,8 +654,8 @@ public struct FfiConverterTypeCollectionInfo: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CollectionInfo {
         return
             try CollectionInfo(
-                name: FfiConverterString.read(from: &buf), 
-                collectionId: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf),
+                collectionId: FfiConverterString.read(from: &buf),
                 numDocuments: FfiConverterUInt32.read(from: &buf)
         )
     }
@@ -732,8 +732,8 @@ public struct FfiConverterTypeDatabaseInfo: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DatabaseInfo {
         return
             try DatabaseInfo(
-                id: FfiConverterString.read(from: &buf), 
-                name: FfiConverterString.read(from: &buf), 
+                id: FfiConverterString.read(from: &buf),
+                name: FfiConverterString.read(from: &buf),
                 tenant: FfiConverterString.read(from: &buf)
         )
     }
@@ -804,7 +804,7 @@ public struct FfiConverterTypeGetResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GetResult {
         return
             try GetResult(
-                ids: FfiConverterSequenceString.read(from: &buf), 
+                ids: FfiConverterSequenceString.read(from: &buf),
                 documents: FfiConverterSequenceOptionString.read(from: &buf)
         )
     }
@@ -874,7 +874,7 @@ public struct FfiConverterTypeQueryResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QueryResult {
         return
             try QueryResult(
-                ids: FfiConverterSequenceSequenceString.read(from: &buf), 
+                ids: FfiConverterSequenceSequenceString.read(from: &buf),
                 documents: FfiConverterSequenceSequenceOptionString.read(from: &buf)
         )
     }
@@ -902,11 +902,7 @@ public func FfiConverterTypeQueryResult_lower(_ value: QueryResult) -> RustBuffe
 
 
 public enum ChromaError: Swift.Error {
-
-    
-    
-    case Generic(message: String
-    )
+    case Generic(message: String)
 }
 
 
@@ -919,25 +915,15 @@ public struct FfiConverterTypeChromaError: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ChromaError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-
-        
-
-        
         case 1: return .Generic(
             message: try FfiConverterString.read(from: &buf)
             )
-
          default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: ChromaError, into buf: inout [UInt8]) {
         switch value {
-
-        
-
-        
-        
         case let .Generic(message):
             writeInt(&buf, Int32(1))
             FfiConverterString.write(message, into: &buf)
