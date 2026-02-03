@@ -102,9 +102,9 @@ public extension AdvancedGetResult {
             return Array(repeating: nil, count: ids.count)
         }
 
-        let decoded = metadatas.map { json in
-            guard let json else { return nil }
-            guard let data = json.data(using: .utf8) else { return nil }
+        let decoded: [ChromaMetadata?] = metadatas.map { json in
+            guard let json else { return nil as ChromaMetadata? }
+            guard let data = json.data(using: .utf8) else { return nil as ChromaMetadata? }
             return try? JSONDecoder().decode(ChromaMetadata.self, from: data)
         }
 
