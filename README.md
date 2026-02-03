@@ -205,6 +205,7 @@ let results = try await embedder.queryCollection(collectionName, queryText: "sim
 - `getDocuments(collectionName: String, ids: [String]?, whereClause: String?, limit: UInt32?, offset: UInt32?, whereDocument: String?, include: [String]?) -> AdvancedGetResult`
   
   Advanced document retrieval with filtering, pagination, and field selection.
+  Metadata values are returned as JSON strings; use `AdvancedGetResult.decodedMetadatas()` for typed decoding.
 
 - `updateDocuments(collectionName: String, ids: [String], embeddings: [[Float]]?, documents: [String]?)`
   

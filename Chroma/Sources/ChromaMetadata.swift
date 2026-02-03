@@ -26,6 +26,35 @@ extension ChromaMetadataValue: Encodable {
     }
 }
 
+extension ChromaMetadataValue: Decodable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+            return
+        }
+        if let value = try? container.decode(Int64.self) {
+            self = .int(value)
+            return
+        }
+        if let value = try? container.decode(Double.self) {
+            self = .float(value)
+            return
+        }
+        if let value = try? container.decode(String.self) {
+            self = .string(value)
+            return
+        }
+        throw DecodingError.typeMismatch(
+            ChromaMetadataValue.self,
+            DecodingError.Context(
+                codingPath: decoder.codingPath,
+                debugDescription: "Unsupported metadata value type."
+            )
+        )
+    }
+}
+
 extension ChromaMetadataValue: ExpressibleByBooleanLiteral {
     public init(booleanLiteral value: Bool) {
         self = .bool(value)
@@ -63,6 +92,29 @@ public enum ChromaMetadataError: Error, LocalizedError {
         case .encodingFailed:
             return "Failed to encode metadata as JSON."
         }
+    }
+}
+
+public extension AdvancedGetResult {
+    /// Decode metadata JSON strings into ChromaMetadata values.
+    func decodedMetadatas() -> [ChromaMetadata?] {
+        guard let metadatas else {
+            return Array(repeating: nil, count: ids.count)
+        }
+
+        let decoded = metadatas.map { json in
+            guard let json else { return nil }
+            guard let data = json.data(using: .utf8) else { return nil }
+            return try? JSONDecoder().decode(ChromaMetadata.self, from: data)
+        }
+
+        if decoded.count < ids.count {
+            return decoded + Array(repeating: nil, count: ids.count - decoded.count)
+        }
+        if decoded.count > ids.count {
+            return Array(decoded.prefix(ids.count))
+        }
+        return decoded
     }
 }
 
