@@ -572,10 +572,10 @@ public struct FfiConverterTypeAdvancedGetResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AdvancedGetResult {
         return
             try AdvancedGetResult(
-                ids: FfiConverterSequenceString.read(from: &buf),
-                embeddings: FfiConverterOptionSequenceSequenceFloat.read(from: &buf),
-                documents: FfiConverterOptionSequenceOptionString.read(from: &buf),
-                metadatas: FfiConverterOptionSequenceOptionString.read(from: &buf),
+                ids: FfiConverterSequenceString.read(from: &buf), 
+                embeddings: FfiConverterOptionSequenceSequenceFloat.read(from: &buf), 
+                documents: FfiConverterOptionSequenceOptionString.read(from: &buf), 
+                metadatas: FfiConverterOptionSequenceOptionString.read(from: &buf), 
                 uris: FfiConverterOptionSequenceOptionString.read(from: &buf)
         )
     }
@@ -654,8 +654,8 @@ public struct FfiConverterTypeCollectionInfo: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CollectionInfo {
         return
             try CollectionInfo(
-                name: FfiConverterString.read(from: &buf),
-                collectionId: FfiConverterString.read(from: &buf),
+                name: FfiConverterString.read(from: &buf), 
+                collectionId: FfiConverterString.read(from: &buf), 
                 numDocuments: FfiConverterUInt32.read(from: &buf)
         )
     }
@@ -732,8 +732,8 @@ public struct FfiConverterTypeDatabaseInfo: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DatabaseInfo {
         return
             try DatabaseInfo(
-                id: FfiConverterString.read(from: &buf),
-                name: FfiConverterString.read(from: &buf),
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
                 tenant: FfiConverterString.read(from: &buf)
         )
     }
@@ -804,7 +804,7 @@ public struct FfiConverterTypeGetResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GetResult {
         return
             try GetResult(
-                ids: FfiConverterSequenceString.read(from: &buf),
+                ids: FfiConverterSequenceString.read(from: &buf), 
                 documents: FfiConverterSequenceOptionString.read(from: &buf)
         )
     }
@@ -874,7 +874,7 @@ public struct FfiConverterTypeQueryResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QueryResult {
         return
             try QueryResult(
-                ids: FfiConverterSequenceSequenceString.read(from: &buf),
+                ids: FfiConverterSequenceSequenceString.read(from: &buf), 
                 documents: FfiConverterSequenceSequenceOptionString.read(from: &buf)
         )
     }
@@ -1245,13 +1245,14 @@ fileprivate struct FfiConverterSequenceSequenceOptionString: FfiConverterRustBuf
         return seq
     }
 }
-public func addDocuments(collectionName: String, ids: [String], embeddings: [[Float]], documents: [String])throws  -> UInt32  {
+public func addDocuments(collectionName: String, ids: [String], embeddings: [[Float]], documents: [String], metadatas: [String?]?)throws  -> UInt32  {
     return try  FfiConverterUInt32.lift(try rustCallWithError(FfiConverterTypeChromaError_lift) {
     uniffi_chroma_swift_fn_func_add_documents(
         FfiConverterString.lower(collectionName),
         FfiConverterSequenceString.lower(ids),
         FfiConverterSequenceSequenceFloat.lower(embeddings),
-        FfiConverterSequenceString.lower(documents),$0
+        FfiConverterSequenceString.lower(documents),
+        FfiConverterOptionSequenceOptionString.lower(metadatas),$0
     )
 })
 }
@@ -1436,7 +1437,7 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_chroma_swift_checksum_func_add_documents() != 15974) {
+    if (uniffi_chroma_swift_checksum_func_add_documents() != 1910) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_chroma_swift_checksum_func_count_collections() != 52564) {

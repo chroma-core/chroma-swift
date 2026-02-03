@@ -12,23 +12,38 @@ extension ChromaEmbedder {
     ///   - collectionName: Name of the collection to add documents to
     ///   - ids: Unique identifiers for each document
     ///   - texts: Array of text documents to embed and add
+    ///   - metadatas: Optional array of metadata dictionaries aligned with ids/texts
     /// - Returns: Number of documents added
     /// - Throws: ChromaEmbedderError or Chroma database errors
     public func addDocuments(
         to collectionName: String,
         ids: [String],
-        texts: [String]
+        texts: [String],
+        metadatas: [ChromaMetadata?]? = nil
     ) async throws -> UInt32 {
         guard ids.count == texts.count else {
             throw ChromaEmbedderError.embeddingFailed(texts,
                 NSError(domain: "ChromaEmbedder", code: 1,
                        userInfo: [NSLocalizedDescriptionKey: "Number of IDs must match number of texts"]))
         }
+        if let metadatas, metadatas.count != ids.count {
+            throw ChromaMetadataError.countMismatch(expected: ids.count, actual: metadatas.count)
+        }
         
         // Generate embeddings for all texts
         let embeddings = try await self.embed(texts: texts)
         
         // Add documents to Chroma collection
+        if let metadatas {
+            return try Chroma.addDocuments(
+                collectionName: collectionName,
+                ids: ids,
+                embeddings: embeddings,
+                documents: texts,
+                metadatas: metadatas
+            )
+        }
+
         return try Chroma.addDocuments(
             collectionName: collectionName,
             ids: ids,
