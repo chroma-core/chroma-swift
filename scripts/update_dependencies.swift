@@ -56,7 +56,7 @@ let sourceFiles = ["ChromaSwift.swift", "ChromaEmbedder.swift", "ChromaEmbedderE
 
 func generatePackageSwift(config: PackageConfig) -> String {
     var content = """
-    // swift-tools-version: 6.0
+    // swift-tools-version: 6.2
     import PackageDescription
 
     let package = Package(

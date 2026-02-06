@@ -21,7 +21,7 @@ Chroma is a Swift package that provides a high-performance, cross-platform inter
 
 ## Requirements
 
-- Swift 6.0+
+- Swift 6.2+
 - macOS 14+ or iOS 17+
 
 
