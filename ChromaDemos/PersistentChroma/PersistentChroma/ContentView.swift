@@ -78,7 +78,7 @@ struct ContentView: View {
                     
                     logsView
                         .frame(height: geometry.size.height * 0.3)
-                        .background(Color(UIColor.systemGroupedBackground))
+                        .background(Color.gray)
                 }
             }
         }

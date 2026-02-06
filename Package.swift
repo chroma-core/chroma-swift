@@ -48,6 +48,7 @@ let package = Package(
             swiftSettings: [
                 .swiftLanguageMode(.v6)
             ]
+            checksum: "d438e2d46544947c59261fda17b2640c9b452e3afbdcdd3d1b2c28bee82c3d51"
         )
     ]
 )

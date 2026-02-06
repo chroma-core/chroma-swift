@@ -50,6 +50,11 @@ struct DatabaseControlsView: View {
                     state.refreshCollections()
                 }
 
+                ActionButton(title: "Print Collection IDs", disabled: !state.isPersistentInitialized) {
+                    await MainActor.run { self.focused = false }
+                    await state.logAllCollectionIds()
+                }
+
                 ActionButton(title: "Get All Documents", disabled: !state.isPersistentInitialized || state.collections.isEmpty) {
                     self.focused = false
                     if state.collections.isEmpty {
