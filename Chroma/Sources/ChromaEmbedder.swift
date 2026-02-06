@@ -149,15 +149,12 @@ public class ChromaEmbedder {
     private func encodeText(_ text: String, container: ModelContainer) async throws -> [Float] {
         return await container.perform { model, tokenizer, pooling in
             let tokens = tokenizer.encode(text: text)
-            var arr = MLXArray(tokens)
-            arr = arr.reshaped(1, tokens.count)
-            let mask = (arr .!= tokenizer.eosTokenId ?? 0)
-            let tokenTypes = MLXArray.zeros(like: arr)
+            let input = MLXArray(tokens).expandedDimensions(axis: 0)
             let output = pooling(
-                model(arr, positionIds: nil, tokenTypeIds: tokenTypes, attentionMask: mask),
-                normalize: true,
-                applyLayerNorm: true
+                model(input, positionIds: nil, tokenTypeIds: nil, attentionMask: nil),
+                normalize: true
             )
+            eval(output)
             return output.asArray(Float.self)
         }
     }
