@@ -262,6 +262,45 @@ ChromaSwift includes built-in support for generating embeddings directly on-devi
 
 
 
+## Development & Debugging
+
+The `ChromaSwift` package normally downloads the published XCFramework from GitHub Releases. When iterating on the Rust bindings you can point the package at your locally built framework without editing the manifest:
+
+1. Rebuild the Swift bindings (from this repo):
+   ```bash
+   cd ../chroma/rust/swift_bindings
+   ./build_swift_package.sh
+   ```
+   This produces `Chroma/chroma_swift_framework.xcframework`.
+
+2. Switch the manifest to the local framework:
+   ```bash
+   ./scripts/use_local_framework.sh
+   ```
+
+3. Build/run your app as usual. When you're ready to return to the published framework, run:
+   ```bash
+   ./scripts/use_release_framework.sh <download-url> <checksum>
+   ```
+   (Pass the URL + checksum from the GitHub release where you uploaded the XCFramework zip.)
+
+### Publishing a new XCFramework (manual)
+
+1. Build the XCFramework as above; the artifact lives at `chroma/rust/swift_bindings/Chroma/chroma_swift_framework.xcframework`.
+2. Zip it for release:
+   ```bash
+   cd chroma/rust/swift_bindings/Chroma
+   ditto -c -k --sequesterRsrc --keepParent chroma_swift_framework.xcframework chroma_swift_framework.xcframework.zip
+   ```
+3. Compute the checksum from `chroma-swift/`:
+   ```bash
+   swift package compute-checksum ../chroma/rust/swift_bindings/Chroma/chroma_swift_framework.xcframework.zip
+   ```
+4. Upload the zip to a GitHub release and update `Package.swift` with the new URL + checksum from that release (use `./scripts/use_release_framework.sh <url> <checksum>` to rewrite the manifest).
+
+These steps keep local debugging and published builds separate without extra automation.
+
+
 ## License
 
 ChromaSwift is available under the Apache License 2.0, same as the underlying Chroma library. See the [LICENSE](https://github.com/chroma-core/chroma-swift/blob/master/LICENSE) file for more info.

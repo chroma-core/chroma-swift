@@ -20,7 +20,7 @@ struct ActionButton: View, Equatable {
     let title: String
     var disabled: Bool = false
     
-    var action: () throws -> Void
+    var action: () async throws -> Void
     
     @State private var inProgress = false
     @State private var errorMessage: String? = nil
@@ -31,14 +31,14 @@ struct ActionButton: View, Equatable {
             inProgress = true
             errorMessage = nil
             
-            DispatchQueue.global(qos: .userInitiated).async {
+            Task(priority: .userInitiated) {
                 do {
-                    try action()
-                    DispatchQueue.main.async {
+                    try await action()
+                    await MainActor.run {
                         inProgress = false
                     }
                 } catch {
-                    DispatchQueue.main.async {
+                    await MainActor.run {
                         errorMessage = error.localizedDescription
                         inProgress = false
                     }

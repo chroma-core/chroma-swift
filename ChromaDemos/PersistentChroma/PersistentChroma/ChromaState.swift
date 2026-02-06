@@ -24,20 +24,57 @@ final class ChromaState {
 }
 
 extension ChromaState {
-    
+
     func addLog(_ message: String) {
-        logs.append("[\(Date().formatted(date: .omitted, time: .standard))] \(message)")
+        let entry = "[\(Date().formatted(date: .omitted, time: .standard))] \(message)"
+        logs.append(entry)
     }
     
     func refreshCollections() {
         do {
-            collections = try listCollections()
-            self.addLog("Found \(collections.count) collections:")
-            collections.forEach { collection in
+            let names = try listCollections()
+            collections = names
+            self.addLog("Found \(names.count) collections:")
+            names.forEach { collection in
                 self.addLog("\(collection)")
             }
         } catch {
             self.addLog("Failed to list collections: \(error)")
+        }
+    }
+    
+    func logAllCollectionIds() async {
+        do {
+            let names = try await runBlocking { try listCollections() }
+            guard !names.isEmpty else {
+                await MainActor.run { addLog("No collections found.") }
+                return
+            }
+            
+            await MainActor.run {
+                addLog("Fetching IDs for \(names.count) collection(s)...")
+            }
+            for name in names {
+                do {
+                    let info = try await runBlocking {
+                        try Chroma.getCollection(collectionName: name)
+                    }
+                    await MainActor.run {
+                        addLog("• \(name): \(info.collectionId)")
+                    }
+                } catch {
+                    await MainActor.run {
+                        addLog("• \(name): failed to fetch info (\(error))")
+                    }
+                }
+            }
+            await MainActor.run {
+                addLog("Finished fetching collection IDs.")
+            }
+        } catch {
+            await MainActor.run {
+                addLog("Failed to list collections before fetching IDs: \(error)")
+            }
         }
     }
     
@@ -56,9 +93,7 @@ extension ChromaState {
         try self.initializeWithPath(path: persistentPath, allowReset: true)
         isPersistentInitialized = true
         
-        DispatchQueue.main.async { [weak self] in
-            self?.logs.removeAll()
-        }
+        logs.removeAll()
     }
     
     func debugFullReset() throws {
@@ -144,7 +179,7 @@ extension ChromaState {
         // 3. Add them to the database
         // Example:
         
-        Task {
+        Task { @MainActor in
             await self.processScreenshots()
         }
     }
@@ -191,5 +226,18 @@ extension ChromaState {
     
     func deleteAllDocumentsFromCollection(collectionName: String) throws {
         try deleteDocuments(collectionName: collectionName, documentIds: nil)
+    }
+    
+    private func runBlocking<T>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let result = try work()
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
 }
