@@ -103,15 +103,11 @@ public class ChromaEmbedder {
         guard isInitialized, let container = modelContainer else {
             throw ChromaEmbedderError.modelNotLoaded
         }
-        
-        do {
-            return try await encodeText(text, container: container)
-        } catch {
-            throw ChromaEmbedderError.embeddingFailed([text], error)
-        }
+
+        return await encodeText(text, container: container)
     }
 
-    /// Generate embeddings for multiple texts
+    /// Generate embeddings for multiple texts using batched inference
     /// - Parameter texts: Array of texts to embed
     /// - Returns: 2D array of embeddings compatible with Chroma addDocuments/queryCollection
     /// - Throws: ChromaEmbedderError if embedding generation fails
@@ -119,43 +115,69 @@ public class ChromaEmbedder {
         guard isInitialized, let container = modelContainer else {
             throw ChromaEmbedderError.modelNotLoaded
         }
-        
+
         guard !texts.isEmpty else {
             return []
         }
-        
-        do {
-            var embeddings: [[Float]] = []
-            
-            // Process texts in batches to avoid memory issues
-            let batchSize = 32
-            for chunk in texts.chunked(into: batchSize) {
-                var batchEmbeddings: [[Float]] = []
-                batchEmbeddings.reserveCapacity(chunk.count)
-                for text in chunk {
-                    let embedding = try await encodeText(text, container: container)
-                    batchEmbeddings.append(embedding)
-                }
-                embeddings.append(contentsOf: batchEmbeddings)
-            }
-            
-            return embeddings
-        } catch {
-            throw ChromaEmbedderError.embeddingFailed(texts, error)
+
+        var allEmbeddings: [[Float]] = []
+
+        let batchSize = 32
+        for chunk in texts.chunked(into: batchSize) {
+            let batchEmbeddings = await encodeBatch(chunk, container: container)
+            allEmbeddings.append(contentsOf: batchEmbeddings)
         }
+
+        return allEmbeddings
     }
-    
-    // Encode text using MLXEmbedders
-    private func encodeText(_ text: String, container: ModelContainer) async throws -> [Float] {
+
+    // Encode a single text using MLXEmbedders
+    private func encodeText(_ text: String, container: ModelContainer) async -> [Float] {
         return await container.perform { model, tokenizer, pooling in
             let tokens = tokenizer.encode(text: text)
             let input = MLXArray(tokens).expandedDimensions(axis: 0)
+            let tokenTypes = MLXArray.zeros(like: input)
             let output = pooling(
-                model(input, positionIds: nil, tokenTypeIds: nil, attentionMask: nil),
+                model(input, positionIds: nil, tokenTypeIds: tokenTypes, attentionMask: nil),
                 normalize: true
             )
             eval(output)
             return output.asArray(Float.self)
+        }
+    }
+
+    // Encode a batch of texts with padding and attention masking
+    private func encodeBatch(_ texts: [String], container: ModelContainer) async -> [[Float]] {
+        return await container.perform { model, tokenizer, pooling in
+            let tokensList = texts.map { tokenizer.encode(text: $0) }
+            let maxLen = tokensList.map(\.count).max() ?? 0
+
+            var padded = [[Int]]()
+            var mask = [[Float]]()
+            for tokens in tokensList {
+                let paddingCount = maxLen - tokens.count
+                let padToken = tokenizer.eosTokenId ?? 0
+                padded.append(tokens + Array(repeating: padToken, count: paddingCount))
+                mask.append(
+                    Array(repeating: Float(1.0), count: tokens.count) +
+                    Array(repeating: Float(0.0), count: paddingCount)
+                )
+            }
+
+            let input = MLXArray(padded.flatMap { $0 }).reshaped(texts.count, maxLen)
+            let attentionMask = MLXArray(mask.flatMap { $0 }).reshaped(texts.count, maxLen)
+
+            let tokenTypes = MLXArray.zeros(like: input)
+            let modelOutput = model(input, positionIds: nil, tokenTypeIds: tokenTypes, attentionMask: attentionMask)
+            let pooled = pooling(modelOutput, mask: attentionMask, normalize: true)
+            eval(pooled)
+
+            // Extract individual embeddings from the batch
+            var embeddings = [[Float]]()
+            for i in 0..<texts.count {
+                embeddings.append(pooled[i].asArray(Float.self))
+            }
+            return embeddings
         }
     }
 }
