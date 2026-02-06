@@ -38,6 +38,14 @@ let package = Package(
             name: "chroma_swiftFFI",
             url: "https://github.com/chroma-core/chroma-swift/releases/download/1.0.1/chroma_swift_framework.xcframework.zip",
             checksum: "234c8fa3aa14d5d7677a7549cba0ad1dd7a8e3a4bced6738f5c9c69074317aec"
+        ),
+        .testTarget(
+            name: "ChromaTests",
+            dependencies: ["Chroma"],
+            path: "Tests/ChromaTests",
+            swiftSettings: [
+                .swiftLanguageMode(.v6)
+            ]
         )
     ]
 )
