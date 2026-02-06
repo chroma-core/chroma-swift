@@ -130,18 +130,11 @@ public class ChromaEmbedder {
             // Process texts in batches to avoid memory issues
             let batchSize = 32
             for chunk in texts.chunked(into: batchSize) {
-                let batchEmbeddings = try await withThrowingTaskGroup(of: [Float].self) { group in
-                    for text in chunk {
-                        group.addTask {
-                            try await self.encodeText(text, container: container)
-                        }
-                    }
-                    
-                    var results: [[Float]] = []
-                    for try await embedding in group {
-                        results.append(embedding)
-                    }
-                    return results
+                var batchEmbeddings: [[Float]] = []
+                batchEmbeddings.reserveCapacity(chunk.count)
+                for text in chunk {
+                    let embedding = try await encodeText(text, container: container)
+                    batchEmbeddings.append(embedding)
                 }
                 embeddings.append(contentsOf: batchEmbeddings)
             }

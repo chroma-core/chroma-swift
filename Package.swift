@@ -1,10 +1,10 @@
-// swift-tools-version:5.9
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "chroma-swift",
     platforms: [
-        .iOS(.v16),
+        .iOS(.v17),
         .macOS(.v14)
     ],
     products: [
@@ -15,8 +15,8 @@ let package = Package(
     ],
     dependencies: [
         .package(
-            url: "https://github.com/ml-explore/mlx-swift-examples",
-            exact: "2.25.6"
+            url: "https://github.com/ml-explore/mlx-swift-lm",
+            from: "2.30.3"
         )
     ],
     targets: [
@@ -24,9 +24,12 @@ let package = Package(
             name: "Chroma",
             dependencies: [
                 "chroma_swiftFFI",
-                .product(name: "MLXEmbedders", package: "mlx-swift-examples")
+                .product(name: "MLXEmbedders", package: "mlx-swift-lm")
             ],
             path: "Chroma/Sources",
+            swiftSettings: [
+                .swiftLanguageMode(.v6)
+            ],
             linkerSettings: [
                 .linkedFramework("SystemConfiguration")
             ]
