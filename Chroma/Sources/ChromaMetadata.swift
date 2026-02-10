@@ -83,14 +83,14 @@ public typealias ChromaMetadata = [String: ChromaMetadataValue]
 
 public enum ChromaMetadataError: Error, LocalizedError {
     case countMismatch(expected: Int, actual: Int)
-    case encodingFailed
+    case metadataWriteUnsupported
 
     public var errorDescription: String? {
         switch self {
         case let .countMismatch(expected, actual):
             return "Metadata count (\(actual)) does not match ids count (\(expected))."
-        case .encodingFailed:
-            return "Failed to encode metadata as JSON."
+        case .metadataWriteUnsupported:
+            return "Writing document metadata is not supported by the current Chroma core binary."
         }
     }
 }
@@ -118,32 +118,6 @@ public extension AdvancedGetResult {
     }
 }
 
-private extension Dictionary where Key == String, Value == ChromaMetadataValue {
-    func chromaJSON() throws -> String {
-        let encoder = JSONEncoder()
-        let data = try encoder.encode(self)
-        guard let json = String(data: data, encoding: .utf8) else {
-            throw ChromaMetadataError.encodingFailed
-        }
-        return json
-    }
-}
-
-public func addDocuments(
-    collectionName: String,
-    ids: [String],
-    embeddings: [[Float]],
-    documents: [String]
-) throws -> UInt32 {
-    return try addDocuments(
-        collectionName: collectionName,
-        ids: ids,
-        embeddings: embeddings,
-        documents: documents,
-        metadatas: nil as [String?]?
-    )
-}
-
 public func addDocuments(
     collectionName: String,
     ids: [String],
@@ -155,15 +129,14 @@ public func addDocuments(
         throw ChromaMetadataError.countMismatch(expected: ids.count, actual: metadatas.count)
     }
 
-    let metadatasJSON = try metadatas.map { metadata in
-        try metadata?.chromaJSON()
+    if metadatas.contains(where: { $0 != nil }) {
+        throw ChromaMetadataError.metadataWriteUnsupported
     }
 
     return try addDocuments(
         collectionName: collectionName,
         ids: ids,
         embeddings: embeddings,
-        documents: documents,
-        metadatas: metadatasJSON
+        documents: documents
     )
 }

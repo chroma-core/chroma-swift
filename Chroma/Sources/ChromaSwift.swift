@@ -577,7 +577,7 @@ public struct FfiConverterTypeAdvancedGetResult: FfiConverterRustBuffer {
                 documents: FfiConverterOptionSequenceOptionString.read(from: &buf), 
                 metadatas: FfiConverterOptionSequenceOptionString.read(from: &buf), 
                 uris: FfiConverterOptionSequenceOptionString.read(from: &buf)
-            )
+        )
     }
 
     public static func write(_ value: AdvancedGetResult, into buf: inout [UInt8]) {
@@ -637,7 +637,7 @@ extension CollectionInfo: Equatable, Hashable {
         }
         return true
     }
-    
+
     public func hash(into hasher: inout Hasher) {
         hasher.combine(name)
         hasher.combine(collectionId)
@@ -910,7 +910,11 @@ public func FfiConverterTypeQueryResult_lower(_ value: QueryResult) -> RustBuffe
 
 
 public enum ChromaError: Swift.Error {
-    case Generic(message: String)
+
+    
+    
+    case Generic(message: String
+    )
 }
 
 
@@ -923,15 +927,25 @@ public struct FfiConverterTypeChromaError: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ChromaError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
+
+        
+
+        
         case 1: return .Generic(
             message: try FfiConverterString.read(from: &buf)
             )
+
          default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: ChromaError, into buf: inout [UInt8]) {
         switch value {
+
+        
+
+        
+        
         case let .Generic(message):
             writeInt(&buf, Int32(1))
             FfiConverterString.write(message, into: &buf)
@@ -1337,14 +1351,13 @@ fileprivate struct FfiConverterSequenceSequenceOptionString: FfiConverterRustBuf
         return seq
     }
 }
-public func addDocuments(collectionName: String, ids: [String], embeddings: [[Float]], documents: [String], metadatas: [String?]?)throws  -> UInt32  {
+public func addDocuments(collectionName: String, ids: [String], embeddings: [[Float]], documents: [String])throws  -> UInt32  {
     return try  FfiConverterUInt32.lift(try rustCallWithError(FfiConverterTypeChromaError_lift) {
     uniffi_chroma_swift_fn_func_add_documents(
         FfiConverterString.lower(collectionName),
         FfiConverterSequenceString.lower(ids),
         FfiConverterSequenceSequenceFloat.lower(embeddings),
-        FfiConverterSequenceString.lower(documents),
-        FfiConverterOptionSequenceOptionString.lower(metadatas),$0
+        FfiConverterSequenceString.lower(documents),$0
     )
 })
 }
@@ -1529,7 +1542,7 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_chroma_swift_checksum_func_add_documents() != 1910) {
+    if (uniffi_chroma_swift_checksum_func_add_documents() != 15974) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_chroma_swift_checksum_func_count_collections() != 52564) {
