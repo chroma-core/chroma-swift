@@ -21,8 +21,8 @@ Chroma is a Swift package that provides a high-performance, cross-platform inter
 
 ## Requirements
 
-- Swift 5.10+
-- macOS 10.15+ or iOS 13+
+- Swift 6.2+
+- macOS 14+ or iOS 17+
 
 
 
@@ -110,6 +110,7 @@ try Chroma.addDocuments(collectionName: collectionName, ids: ids, embeddings: em
 ### Using Local Embeddings Models
 
 ChromaSwift includes built-in support for local embeddings generation using the `ChromaEmbedder` class. This allows you to generate embeddings directly on-device without requiring external API calls.
+Local embeddings are powered by `MLXEmbedders` from `mlx-swift-lm`.
 
 ```swift
 import Chroma

@@ -5,7 +5,7 @@ let package = Package(
     name: "chroma-swift",
     platforms: [
         .iOS(.v17),
-        .macOS("15.5")
+        .macOS(.v14)
     ],
     products: [
         .library(

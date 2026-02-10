@@ -33,19 +33,19 @@ let packageConfig = PackageConfig(
     name: "Chroma",
     platforms: [
         "macOS": ".v14",
-        "iOS": ".v16"
+        "iOS": ".v17"
     ],
     dependencies: [
         DependencyConfig(
-            name: "mlx-swift-examples",
-            url: "https://github.com/ml-explore/mlx-swift-examples",
+            name: "mlx-swift-lm",
+            url: "https://github.com/ml-explore/mlx-swift-lm",
             branch: "main",
             products: ["MLXEmbedders"]
         )
     ],
     targetDependencies: [
         "chroma_swift_framework",
-        ".product(name: \"MLXEmbedders\", package: \"mlx-swift-examples\")"
+        ".product(name: \"MLXEmbedders\", package: \"mlx-swift-lm\")"
     ]
 )
 
@@ -56,7 +56,7 @@ let sourceFiles = ["ChromaSwift.swift", "ChromaEmbedder.swift", "ChromaEmbedderE
 
 func generatePackageSwift(config: PackageConfig) -> String {
     var content = """
-    // swift-tools-version:5.10
+    // swift-tools-version: 6.2
     import PackageDescription
 
     let package = Package(
