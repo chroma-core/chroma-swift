@@ -63,7 +63,17 @@ let collectionId = try Chroma.createCollection(name: collectionName)
 let ids = ["doc1", "doc2"]
 let embeddings: [[Float]] = [[0.1, 0.2, 0.3], [0.3, 0.2, 0.1]]
 let documents = ["Document 1 text", "Document 2 text"]
-try Chroma.addDocuments(collectionName: collectionName, ids: ids, embeddings: embeddings, documents: documents)
+let metadatas: [ChromaMetadata?] = [
+    ["source": "manual", "rank": 1],
+    ["source": "manual", "rank": 2, "active": true]
+]
+try Chroma.addDocuments(
+    collectionName: collectionName,
+    ids: ids,
+    embeddings: embeddings,
+    documents: documents,
+    metadatas: metadatas
+)
 let results = try Chroma.queryCollection(collectionName: collectionName, queryEmbeddings: [[0.1, 0.2, 0.3]], nResults: 1, whereFilter: nil, ids: nil, include: nil)
 
 ```
@@ -86,11 +96,21 @@ try Chroma.initializeWithPath(path: chromaDirectory, allowReset: false)
 let collectionName = "persistent_collection"
 let collectionId = try Chroma.createCollection(name: collectionName)
 
-// Add documents as usual
+// Add documents as usual (with optional metadata)
 let ids = ["doc1", "doc2"]
 let embeddings: [[Float]] = [[0.1, 0.2, 0.3], [0.3, 0.2, 0.1]]
 let documents = ["Document 1 text", "Document 2 text"]
-try Chroma.addDocuments(collectionName: collectionName, ids: ids, embeddings: embeddings, documents: documents)
+let metadatas: [ChromaMetadata?] = [
+    ["source": "manual", "rank": 1],
+    ["source": "manual", "rank": 2, "active": true]
+]
+try Chroma.addDocuments(
+    collectionName: collectionName,
+    ids: ids,
+    embeddings: embeddings,
+    documents: documents,
+    metadatas: metadatas
+)
 
 // Data will be preserved between app sessions
 ```
@@ -174,9 +194,10 @@ let results = try await embedder.queryCollection(collectionName, queryText: "sim
   Returns the total number of collections.
 
 ### Document/Record Management
-- `addDocuments(collectionName: String, ids: [String], embeddings: [[Float]], documents: [String]) -> UInt32`
+- `addDocuments(collectionName: String, ids: [String], embeddings: [[Float]], documents: [String], metadatas: [ChromaMetadata?]? = nil) -> UInt32`
   
-  Adds documents with embeddings to a collection.
+  Adds documents with embeddings and optional metadata to a collection.
+  Note: this currently returns `1` on success regardless of the number of documents; use `countDocuments` if you need the actual count.
 
 - `getAllDocuments(collectionName: String) -> GetResult`
   
@@ -185,6 +206,7 @@ let results = try await embedder.queryCollection(collectionName, queryText: "sim
 - `getDocuments(collectionName: String, ids: [String]?, whereClause: String?, limit: UInt32?, offset: UInt32?, whereDocument: String?, include: [String]?) -> AdvancedGetResult`
   
   Advanced document retrieval with filtering, pagination, and field selection.
+  Metadata values are returned as JSON strings; use `AdvancedGetResult.decodedMetadatas()` for typed decoding.
 
 - `updateDocuments(collectionName: String, ids: [String], embeddings: [[Float]]?, documents: [String]?)`
   
