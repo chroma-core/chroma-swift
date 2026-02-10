@@ -572,10 +572,10 @@ public struct FfiConverterTypeAdvancedGetResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AdvancedGetResult {
         return
             try AdvancedGetResult(
-                ids: FfiConverterSequenceString.read(from: &buf),
-                embeddings: FfiConverterOptionSequenceSequenceFloat.read(from: &buf),
-                documents: FfiConverterOptionSequenceOptionString.read(from: &buf),
-                metadatas: FfiConverterOptionSequenceOptionString.read(from: &buf),
+                ids: FfiConverterSequenceString.read(from: &buf), 
+                embeddings: FfiConverterOptionSequenceSequenceFloat.read(from: &buf), 
+                documents: FfiConverterOptionSequenceOptionString.read(from: &buf), 
+                metadatas: FfiConverterOptionSequenceOptionString.read(from: &buf), 
                 uris: FfiConverterOptionSequenceOptionString.read(from: &buf)
         )
     }
@@ -654,8 +654,8 @@ public struct FfiConverterTypeCollectionInfo: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CollectionInfo {
         return
             try CollectionInfo(
-                name: FfiConverterString.read(from: &buf),
-                collectionId: FfiConverterString.read(from: &buf),
+                name: FfiConverterString.read(from: &buf), 
+                collectionId: FfiConverterString.read(from: &buf), 
                 numDocuments: FfiConverterUInt32.read(from: &buf)
         )
     }
@@ -732,8 +732,8 @@ public struct FfiConverterTypeDatabaseInfo: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DatabaseInfo {
         return
             try DatabaseInfo(
-                id: FfiConverterString.read(from: &buf),
-                name: FfiConverterString.read(from: &buf),
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
                 tenant: FfiConverterString.read(from: &buf)
         )
     }
@@ -804,7 +804,7 @@ public struct FfiConverterTypeGetResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GetResult {
         return
             try GetResult(
-                ids: FfiConverterSequenceString.read(from: &buf),
+                ids: FfiConverterSequenceString.read(from: &buf), 
                 documents: FfiConverterSequenceOptionString.read(from: &buf)
         )
     }
@@ -834,12 +834,14 @@ public func FfiConverterTypeGetResult_lower(_ value: GetResult) -> RustBuffer {
 public struct QueryResult {
     public var ids: [[String]]
     public var documents: [[String?]]
+    public var distances: [[Float?]]?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(ids: [[String]], documents: [[String?]]) {
+    public init(ids: [[String]], documents: [[String?]], distances: [[Float?]]?) {
         self.ids = ids
         self.documents = documents
+        self.distances = distances
     }
 }
 
@@ -856,12 +858,16 @@ extension QueryResult: Equatable, Hashable {
         if lhs.documents != rhs.documents {
             return false
         }
+        if lhs.distances != rhs.distances {
+            return false
+        }
         return true
     }
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ids)
         hasher.combine(documents)
+        hasher.combine(distances)
     }
 }
 
@@ -874,14 +880,16 @@ public struct FfiConverterTypeQueryResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> QueryResult {
         return
             try QueryResult(
-                ids: FfiConverterSequenceSequenceString.read(from: &buf),
-                documents: FfiConverterSequenceSequenceOptionString.read(from: &buf)
+                ids: FfiConverterSequenceSequenceString.read(from: &buf), 
+                documents: FfiConverterSequenceSequenceOptionString.read(from: &buf), 
+                distances: FfiConverterOptionSequenceSequenceOptionFloat.read(from: &buf)
         )
     }
 
     public static func write(_ value: QueryResult, into buf: inout [UInt8]) {
         FfiConverterSequenceSequenceString.write(value.ids, into: &buf)
         FfiConverterSequenceSequenceOptionString.write(value.documents, into: &buf)
+        FfiConverterOptionSequenceSequenceOptionFloat.write(value.distances, into: &buf)
     }
 }
 
@@ -1003,6 +1011,30 @@ fileprivate struct FfiConverterOptionUInt32: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionFloat: FfiConverterRustBuffer {
+    typealias SwiftType = Float?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterFloat.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterFloat.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -1099,6 +1131,30 @@ fileprivate struct FfiConverterOptionSequenceSequenceFloat: FfiConverterRustBuff
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionSequenceSequenceOptionFloat: FfiConverterRustBuffer {
+    typealias SwiftType = [[Float?]]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceSequenceOptionFloat.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceSequenceOptionFloat.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceFloat: FfiConverterRustBuffer {
     typealias SwiftType = [Float]
 
@@ -1141,6 +1197,31 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceOptionFloat: FfiConverterRustBuffer {
+    typealias SwiftType = [Float?]
+
+    public static func write(_ value: [Float?], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterOptionFloat.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Float?] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Float?]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterOptionFloat.read(from: &buf))
         }
         return seq
     }
@@ -1216,6 +1297,31 @@ fileprivate struct FfiConverterSequenceSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterSequenceString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceSequenceOptionFloat: FfiConverterRustBuffer {
+    typealias SwiftType = [[Float?]]
+
+    public static func write(_ value: [[Float?]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterSequenceOptionFloat.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [[Float?]] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [[Float?]]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterSequenceOptionFloat.read(from: &buf))
         }
         return seq
     }
