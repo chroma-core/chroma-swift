@@ -22,6 +22,19 @@ private func uniqueName(_ prefix: String) -> String {
     "\(prefix)_\(UUID().uuidString)"
 }
 
+private func runBlocking<T>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+    try await withCheckedThrowingContinuation { continuation in
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let result = try work()
+                continuation.resume(returning: result)
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+}
+
 // MARK: - Database Tests
 // All database-backed tests run in a single flat, serialized suite to prevent
 // concurrent reset() calls from interfering with each other.
@@ -65,6 +78,19 @@ struct ChromaTests {
 //        #expect(info.collectionId == createdId)
 //        #expect(info.numDocuments == 0)
     }
+
+    @Test func getCollectionInfo2() async throws {
+        try ChromaTestEnvironment.setUp()
+        let name = uniqueName("info")
+        let createdId = try Chroma.createCollection(name: name)
+
+        let info = try await runBlocking {
+            try Chroma.getCollection(collectionName: name)
+        }
+        #expect(info.name == name)
+        #expect(info.collectionId == createdId)
+        #expect(info.numDocuments == 0)
+    }
     
     @Test func getCollectionInfoReflectsDocumentCount() throws {
         try ChromaTestEnvironment.setUp()
@@ -83,6 +109,24 @@ struct ChromaTests {
         // until this is fixed upstream.
 //        let info = try Chroma.getCollection(collectionName: name)
 //        #expect(info.numDocuments == 2)
+    }
+
+    @Test func getCollectionInfoReflectsDocumentCount2() async throws {
+        try ChromaTestEnvironment.setUp()
+        let name = uniqueName("info_count")
+        _ = try Chroma.createCollection(name: name)
+
+        _ = try Chroma.addDocuments(
+            collectionName: name,
+            ids: ["d1", "d2"],
+            embeddings: [[1, 0, 0], [0, 1, 0]],
+            documents: ["one", "two"]
+        )
+
+        let info = try await runBlocking {
+            try Chroma.getCollection(collectionName: name)
+        }
+        #expect(info.numDocuments == 2)
     }
     
     @Test func updateCollectionName() throws {
@@ -127,6 +171,15 @@ struct ChromaTests {
             // (both for valid and invalid names). Tests for CollectionInfo are skipped
             // until this is fixed upstream.
 //            try Chroma.getCollection(collectionName: "nonexistent_\(UUID().uuidString)")
+        }
+    }
+
+    @Test func getNonexistentCollectionThrows2() async throws {
+        try ChromaTestEnvironment.setUp()
+        await #expect(throws: (any Error).self) {
+            _ = try await runBlocking {
+                try Chroma.getCollection(collectionName: "nonexistent_\(UUID().uuidString)")
+            }
         }
     }
     
