@@ -6,131 +6,160 @@
 
 Chroma is a Swift package that provides a high-performance, cross-platform interface for working with vector stores and embeddings collections, backed by the [Chroma](https://github.com/chroma-core/chroma) database engine. It is designed for use in macOS and iOS applications, supporting both Apple Silicon and Intel architectures.
 
+## See what this package includes
 
+- Initialize in-memory or persistent storage
+- Create, list, count, update, and delete collections
+- Add, get, update, upsert, count, query, and delete documents
+- Query by embeddings, including batched queries
+- Optional field selection via `include` in `getDocuments` and `queryCollection`
+- Database-level APIs (`createDatabase`, `getDatabase`, `listDatabases`, `deleteDatabase`)
+- Typed metadata decode helpers via `ChromaMetadataValue` and `decodedMetadatas()`
+- Local embeddings with `ChromaEmbedder` + MLXEmbedders models
 
-## Features
-
-- Create, list, and delete collections
-- Add documents with embeddings and metadata
-- Perform similarity search and queries over collections
-- Retrieve, update, and delete documents
-- Reset and initialize the database
-- Pure Swift API with UniFFI bindings to the Chroma core
-
-
-
-## Requirements
+## Check requirements
 
 - Swift 6.2+
 - macOS 14+ or iOS 17+
 
+## Install Chroma Swift
 
-
-## Installation
-
-Add Chroma to your `Package.swift` dependencies:
+1. Add this package dependency:
 
 ```swift
-.package(url: "https://github.com/your-org/ChromaSwift.git", from: "1.0.0")
+.package(url: "https://github.com/chroma-core/chroma-swift.git", from: "1.0.2")
 ```
 
-Then add `Chroma` as a dependency for your target:
+2. Add the product to your app target:
 
 ```swift
 .target(
     name: "YourApp",
     dependencies: [
-        .product(name: "Chroma", package: "ChromaSwift")
+	    .product(name: "Chroma", package: "ChromaSwift")
     ]
 )
 ```
 
-
-
-## Usage
-
-Import the package in your Swift file:
+3. Import the module where you use it:
 
 ```swift
 import Chroma
 ```
 
-### Basic Example (Ephemeral)
+## Run an end-to-end quick start (Ephemeral)
+
+### What you'll do
+
+- Initialize Chroma in memory
+- Create one collection
+- Add two documents with sample embeddings
+- Use realistic document text content (not file names or titles)
+- Define realistic metadata shape for each document
+- Run one nearest-neighbour query
+
+### Before you start
+
+- Call `Chroma.initialize(...)` before any collection or document operation.
+- This example uses tiny hand-written vectors so the end-to-end flow is easy to read.
+- In real apps, generate embeddings with an embedding model, and use the same model for writes and queries in the same collection.
+
+### Do it
+
+1. Add this code:
+
 ```swift
+import Chroma
+
 try Chroma.initialize(allowReset: true)
+
 let collectionName = "my_collection"
-let collectionId = try Chroma.createCollection(name: collectionName)
-let ids = ["doc1", "doc2"]
-let embeddings: [[Float]] = [[0.1, 0.2, 0.3], [0.3, 0.2, 0.1]]
-let documents = ["Document 1 text", "Document 2 text"]
-let metadatas: [ChromaMetadata?] = [
-    ["source": "manual", "rank": 1],
-    ["source": "manual", "rank": 2, "active": true]
+_ = try Chroma.createCollection(name: collectionName)
+
+let ids = ["cats_doc", "dogs_doc"]
+let embeddings: [[Float]] = [
+    [1.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0]
 ]
-try Chroma.addDocuments(
+
+let documents = [
+    "Cats are small carnivores often kept as companion animals.",
+    "Dogs are domesticated canids known for companionship and work."
+]
+
+let metadatas: [ChromaMetadata?] = [
+    [
+        "source_url": "file:///knowledge/animals/cats.txt",
+        "content_type": "text/plain"
+    ],
+    [
+        "source_url": "file:///knowledge/animals/dogs.md",
+        "content_type": "text/markdown",
+        "reviewed": true
+    ]
+]
+
+_ = try Chroma.addDocuments(
     collectionName: collectionName,
     ids: ids,
     embeddings: embeddings,
     documents: documents,
     metadatas: metadatas
 )
-let results = try Chroma.queryCollection(collectionName: collectionName, queryEmbeddings: [[0.1, 0.2, 0.3]], nResults: 1, whereFilter: nil, ids: nil, include: nil)
 
+let result = try Chroma.queryCollection(
+    collectionName: collectionName,
+    queryEmbeddings: [[1.0, 0.0, 0.0]],
+    nResults: 1,
+    whereFilter: nil,
+    ids: nil,
+    include: ["documents"]
+)
+
+let topId = result.ids[0][0]
+let topDocument = result.documents[0][0] ?? "<missing document>"
+print("Top match: \(topId) -> \(topDocument)") // expected: Top match: cats_doc -> Cats are small carnivores often kept as companion animals.
 ```
 
+### Verify it worked
 
+- `try Chroma.countCollections()` returns `1`.
+- `try Chroma.countDocuments(collectionName: "my_collection")` returns `2`.
+- Printed output includes `Top match: cats_doc -> Cats are small carnivores often kept as companion animals.`.
 
-### Persistent Storage
+## Persist data to disk
 
 By default, Chroma operates in an ephemeral mode where data is stored in memory and lost when your application terminates. For persistent storage, initialize Chroma with a specific file path:
 
+1. Initialize with `initializeWithPath`.
+2. Reuse the same path next launch.
+
 ```swift
-// Specify a directory path for persistent storage
-let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-let chromaDirectory = documentsDirectory.appendingPathComponent("chroma_db").path
+let chromaDirectory = URL.documentsDirectory
+    .appendingPathComponent("chroma_db")
+    .path
 
-// Initialize with persistent storage
 try Chroma.initializeWithPath(path: chromaDirectory, allowReset: false)
-
-// Now all operations will persist data to disk
-let collectionName = "persistent_collection"
-let collectionId = try Chroma.createCollection(name: collectionName)
-
-// Add documents as usual (with optional metadata)
-let ids = ["doc1", "doc2"]
-let embeddings: [[Float]] = [[0.1, 0.2, 0.3], [0.3, 0.2, 0.1]]
-let documents = ["Document 1 text", "Document 2 text"]
-let metadatas: [ChromaMetadata?] = [
-    ["source": "manual", "rank": 1],
-    ["source": "manual", "rank": 2, "active": true]
-]
-try Chroma.addDocuments(
-    collectionName: collectionName,
-    ids: ids,
-    embeddings: embeddings,
-    documents: documents,
-    metadatas: metadatas
-)
 
 // Data will be preserved between app sessions
 ```
 
+### Apply persistence best practices
 
+- Set `allowReset` to `false` in production to prevent accidental data loss.
+- Use one consistent path across launches.
+- Back up and migrate your on-disk database as part of app updates.
+- On iOS, prefer the app Documents directory if you want backup inclusion.
+- On macOS, choose a user-visible location policy for supportability.
 
-#### Persistence Best Practices
+## Use local embeddings models
 
-- Set `allowReset` to `false` in production to prevent accidental data loss
-- Use a consistent path across app launches to access the same database
-- Consider implementing backup and migration strategies for your persistent database
-- For iOS apps, use the app's Documents directory to ensure the database is included in backups
-- For macOS apps, consider user preferences for database location
+`ChromaEmbedder` lets you embed text on-device using `MLXEmbedders` from `mlx-swift-lm`.
 
-
-
-### Using Local Embeddings Models
-
-ChromaSwift includes built-in support for local embeddings generation using the `ChromaEmbedder` class. This allows you to generate embeddings directly on-device without requiring external API calls.
-Local embeddings are powered by `MLXEmbedders` from `mlx-swift-lm`.
+1. Create an embedder.
+2. Load the model once.
+3. Add text documents with automatic embedding.
+4. Query with text directly.
 
 ```swift
 import Chroma
@@ -149,179 +178,239 @@ await embedder.loadModel()
 // Add documents with automatic embedding
 let ids = ["doc1", "doc2"]
 let texts = ["Document 1 text", "Document 2 text"]
-let count = try await embedder.addDocuments(to: collectionName, ids: ids, texts: texts)
+let count = try await embedder.addDocuments(
+    to: collectionName,
+    ids: ["doc1", "doc2"],
+    texts: ["Document 1 text", "Document 2 text"]
+)
 
 // Query using text instead of pre-computed embeddings
-let results = try await embedder.queryCollection(collectionName, queryText: "similar document", nResults: 5)
+let results = try await embedder.queryCollection(
+    collectionName,
+    queryText: "similar document",
+    nResults: 5
+)
 ```
 
+### Verify local embeddings are ready
 
+- `embedder.embeddingDimensions` matches the selected model.
+- `try await embedder.embed(text: "...")` returns non-zero values.
+- Result vector L2 norm is approximately `1.0` for supported models.
 
-## API Overview
+### Choose an embedding model
 
-### Initialization Functions
-- `initialize(allowReset: Bool)`
-  
-  Initializes the Chroma database.
+Approximate sizes come from current model cards and may change as upstream revisions ship.
 
-- `initializeWithPath(path: String?, allowReset: Bool)`
-  
-  Initializes the Chroma database at a specific path for persistent storage. 
+| Case | Hugging Face model ID | Dimensions | Approximate size | Typical use |
+|---|---|---:|---:|---|
+| `bgeMicro` | [TaylorAI/bge-micro-v2](https://huggingface.co/TaylorAI/bge-micro-v2) | 384 | ~17MB | Mobile, constrained memory |
+| `gteTiny` | [TaylorAI/gte-tiny](https://huggingface.co/TaylorAI/gte-tiny) | 384 | ~25MB | Mobile, lightweight |
+| `miniLML6` | [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | 384 | ~90MB | Balanced quality/speed |
+| `miniLML12` | [sentence-transformers/all-MiniLM-L12-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L12-v2) | 384 | ~130MB | Higher quality than L6 |
+| `bgeSmall` | [BAAI/bge-small-en-v1.5](https://huggingface.co/BAAI/bge-small-en-v1.5) | 384 | ~130MB | Strong small model |
+| `bgeBase` | [BAAI/bge-base-en-v1.5](https://huggingface.co/BAAI/bge-base-en-v1.5) | 768 | ~440MB | Desktop quality |
+| `bgeLarge` | [BAAI/bge-large-en-v1.5](https://huggingface.co/BAAI/bge-large-en-v1.5) | 1024 | ~1.3GB | Maximum quality |
+| `mixedbreadLarge` | [mixedbread-ai/mxbai-embed-large-v1](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1) | 1024 | ~1.3GB | Maximum quality |
 
-### Collection Management
-- `createCollection(name: String) -> String`
-  
-  Creates a new collection. 
+## Handle metadata correctly
 
-- `getCollection(collectionName: String) -> CollectionInfo`
-  
-  Gets information about a collection including name, ID, and document count.
+`ChromaMetadata` is a typealias:
 
-- `listCollections() -> [String]`
-  
-  Returns a list of all collection names.
+```swift
+public typealias ChromaMetadata = [String: ChromaMetadataValue]
+```
 
-- `deleteCollection(collectionName: String)`
-  
-  Deletes a collection and all its documents. 
+Supported value types:
 
-- `updateCollection(collectionName: String, newName: String?)`
-  
-  Updates a collection's name.
+- `bool(Bool)`
+- `int(Int64)`
+- `float(Double)`
+- `string(String)`
 
-- `countCollections() -> UInt32`
-  
-  Returns the total number of collections.
+You can decode metadata returned by `getDocuments`:
 
-### Document/Record Management
-- `addDocuments(collectionName: String, ids: [String], embeddings: [[Float]], documents: [String], metadatas: [ChromaMetadata?]? = nil) -> UInt32`
-  
-  Adds documents with embeddings and optional metadata to a collection.
-  Note: this currently returns `1` on success regardless of the number of documents; use `countDocuments` if you need the actual count.
+```swift
+let result = try Chroma.getDocuments(
+    collectionName: "my_collection",
+    ids: nil,
+    whereClause: nil,
+    limit: nil,
+    offset: nil,
+    whereDocument: nil,
+    include: ["metadatas"]
+)
 
-- `getAllDocuments(collectionName: String) -> GetResult`
-  
-  Retrieves all documents and their metadata from a collection.
+let decoded = result.decodedMetadatas()
+```
 
-- `getDocuments(collectionName: String, ids: [String]?, whereClause: String?, limit: UInt32?, offset: UInt32?, whereDocument: String?, include: [String]?) -> AdvancedGetResult`
-  
-  Advanced document retrieval with filtering, pagination, and field selection.
-  Metadata values are returned as JSON strings; use `AdvancedGetResult.decodedMetadatas()` for typed decoding.
+> **CAUTION**
+> Metadata writes are currently blocked by the shipped Chroma core binary.
+> `Chroma.addDocuments(..., metadatas: ...)` throws `ChromaMetadataError.metadataWriteUnsupported` if any metadata entry is non-`nil`.
 
-- `updateDocuments(collectionName: String, ids: [String], embeddings: [[Float]]?, documents: [String]?)`
-  
-  Updates existing documents with new embeddings and/or content.
+## Use the complete API reference
 
-- `upsertDocuments(collectionName: String, ids: [String], embeddings: [[Float]]?, documents: [String]?)`
-  
-  Insert or update documents (upsert operation).
+### Understand result and model types
 
-- `deleteDocuments(collectionName: String, ids: [String]?)`
-  
-  Deletes documents by their IDs.
+| Type | Fields |
+|---|---|
+| `CollectionInfo` | `name: String`, `collectionId: String`, `numDocuments: UInt32` |
+| `DatabaseInfo` | `id: String`, `name: String`, `tenant: String` |
+| `GetResult` | `ids: [String]`, `documents: [String?]` |
+| `AdvancedGetResult` | `ids: [String]`, `embeddings: [[Float]]?`, `documents: [String?]?`, `metadatas: [String?]?`, `uris: [String?]?` |
+| `QueryResult` | `ids: [[String]]`, `documents: [[String?]]`, `distances: [[Float?]]?` |
+| `ChromaError` | `.Generic(message: String)` |
+| `ChromaMetadataError` | `.countMismatch(expected:actual:)`, `.metadataWriteUnsupported` |
+| `ChromaEmbedderError` | `.modelNotLoaded`, `.modelLoadingFailed(_,_)`, `.embeddingFailed(_,_)` |
 
-- `countDocuments(collectionName: String) -> UInt32`
-  
-  Returns the number of documents in a collection.
+### Call Chroma core functions
 
-### Query Functions
-- `queryCollection(collectionName: String, queryEmbeddings: [[Float]], nResults: UInt32, whereFilter: String?, ids: [String]?, include: [String]?) -> QueryResult`
-  
-  Performs similarity search on the collection using embeddings.
+```swift
+// Initialization and system
+func initialize(allowReset: Bool) throws
+func initializeWithPath(path: String?, allowReset: Bool) throws
+func reset() throws
+func getVersion() throws -> String
+func getMaxBatchSize() throws -> UInt32
+func heartbeat() throws -> Int64
 
-### Database Management
-- `createDatabase(name: String) -> String`
-  
-  Creates a new database.
+// Collections
+func createCollection(name: String) throws -> String
+func getCollection(collectionName: String) throws -> CollectionInfo
+func listCollections() throws -> [String]
+func updateCollection(collectionName: String, newName: String?) throws
+func deleteCollection(collectionName: String) throws
+func countCollections() throws -> UInt32
 
-- `getDatabase(name: String) -> DatabaseInfo`
-  
-  Gets information about a database.
+// Documents
+func addDocuments(collectionName: String, ids: [String], embeddings: [[Float]], documents: [String]) throws -> UInt32
+func addDocuments(collectionName: String, ids: [String], embeddings: [[Float]], documents: [String], metadatas: [ChromaMetadata?]) throws -> UInt32
+func getAllDocuments(collectionName: String) throws -> GetResult
+func getDocuments(collectionName: String, ids: [String]?, whereClause: String?, limit: UInt32?, offset: UInt32?, whereDocument: String?, include: [String]?) throws -> AdvancedGetResult
+func updateDocuments(collectionName: String, ids: [String], embeddings: [[Float]]?, documents: [String]?) throws
+func upsertDocuments(collectionName: String, ids: [String], embeddings: [[Float]]?, documents: [String]?) throws
+func deleteDocuments(collectionName: String, ids: [String]?) throws
+func countDocuments(collectionName: String) throws -> UInt32
 
-- `listDatabases() -> [String]`
-  
-  Returns a list of all database names.
+// Queries
+func queryCollection(collectionName: String, queryEmbeddings: [[Float]], nResults: UInt32, whereFilter: String?, ids: [String]?, include: [String]?) throws -> QueryResult
 
-- `deleteDatabase(name: String)`
-  
-  Deletes a database.
+// Databases
+func createDatabase(name: String) throws -> String
+func getDatabase(name: String) throws -> DatabaseInfo
+func listDatabases() throws -> [String]
+func deleteDatabase(name: String) throws
+```
 
-### System Functions
-- `reset()`
-  
-  Resets the database, clearing all collections and documents. 
+### Call ChromaEmbedder functions
 
-- `getVersion() -> String`
-  
-  Returns the version of the Chroma core.
+```swift
+public init(model: ChromaEmbedder.EmbeddingModel = .miniLML6)
+public func loadModel() async throws
+public func embed(text: String) async throws -> [Float]
+public func embed(texts: [String]) async throws -> [[Float]]
+public func addDocuments(to collectionName: String, ids: [String], texts: [String], metadatas: [ChromaMetadata?]? = nil) async throws -> UInt32
+public func queryCollection(_ collectionName: String, queryTexts: [String], nResults: UInt32 = 10, whereFilter: String? = nil, ids: [String]? = nil, include: [String]? = nil) async throws -> QueryResult
+public func queryCollection(_ collectionName: String, queryText: String, nResults: UInt32 = 10, whereFilter: String? = nil, ids: [String]? = nil, include: [String]? = nil) async throws -> QueryResult
+public func createCollection(name: String) throws -> String
+public var modelInfo: [String: Any] { get }
+```
 
-- `getMaxBatchSize() -> UInt32`
-  
-  Returns the maximum batch size for operations.
+### Use `EmbeddingModel` cases
 
-- `heartbeat() -> Int64`
-  
-  Returns a timestamp indicating the system is alive.
+```swift
+case bgeMicro
+case gteTiny
+case miniLML6
+case miniLML12
+case bgeSmall
+case bgeBase
+case bgeLarge
+case mixedbreadLarge
+```
 
+Each case exposes:
 
+- `rawValue`: Hugging Face model ID
+- `displayName: String`
+- `embeddingDimensions: Int`
 
-## Local Embeddings Support
+### Expect these behaviour details
 
-ChromaSwift includes built-in support for generating embeddings directly on-device using the `ChromaEmbedder` class. This eliminates the need for external API calls and enables fully offline operation.
+- `createCollection(name:)` is idempotent by name in current tests.
+- `upsertDocuments(...)` inserts new IDs and updates existing IDs.
+- `deleteDocuments(collectionName:ids: nil)` deletes all documents in the collection.
+- `queryCollection(..., nResults: large)` returns only available matches.
+- `include` controls optional return fields. Example: include `["embeddings"]` to receive embeddings from `getDocuments`.
+- `decodedMetadatas()` converts metadata JSON strings to `[ChromaMetadata?]`.
+- Use `countDocuments(collectionName:)` when you need an authoritative post-write document count.
+- `FfiConverter*` and `uniffiEnsureChromaSwiftInitialized()` symbols are generated UniFFI scaffolding, not application-level API.
 
-### Available Models
+## Troubleshoot common issues
 
-| Model | Dimensions | Size | Best For | Hugging Face Model Card |
-|-------|------------|------|----------|-------------------------|
-| `bgeMicro` | 384 | ~17MB | Mobile, resource-constrained environments | [TaylorAI/bge-micro-v2](https://huggingface.co/TaylorAI/bge-micro-v2) |
-| `gteTiny` | 384 | ~25MB | Mobile, lightweight deployments | [TaylorAI/gte-tiny](https://huggingface.co/TaylorAI/gte-tiny) |
-| `miniLML6` | 384 | ~90MB | Balanced performance/quality | [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) |
-| `miniLML12` | 384 | ~130MB | Better quality, moderate size | [sentence-transformers/all-MiniLM-L12-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L12-v2) |
-| `bgeSmall` | 384 | ~130MB | Better quality, moderate size | [BAAI/bge-small-en-v1.5](https://huggingface.co/BAAI/bge-small-en-v1.5) |
-| `bgeBase` | 768 | ~440MB | Desktop apps, higher quality | [BAAI/bge-base-en-v1.5](https://huggingface.co/BAAI/bge-base-en-v1.5) |
-| `bgeLarge` | 1024 | ~1.3GB | Maximum quality, desktop only | [BAAI/bge-large-en-v1.5](https://huggingface.co/BAAI/bge-large-en-v1.5) |
-| `mixedbreadLarge` | 1024 | ~1.3GB | Maximum quality, desktop only | [mixedbread-ai/mxbai-embed-large-v1](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1) |
+- **Symptom:** `Embedding model not loaded. Call loadModel() first.` **Cause:** `embed` or embedder query called before model load. **Fix:** call `try await embedder.loadModel()` once at startup.
+- **Symptom:** `Metadata count (...) does not match ids count (...)`. **Cause:** metadata array length differs from IDs. **Fix:** pass one metadata entry per ID.
+- **Symptom:** `Writing document metadata is not supported ...`. **Cause:** current binary does not support metadata writes. **Fix:** omit metadata on writes or pass only `nil` metadata placeholders.
+- **Symptom:** query returns IDs but missing text. **Cause:** `documents` not requested in `include`. **Fix:** pass `include: ["documents"]`.
+- **Symptom:** `reset()` fails. **Cause:** initialization may not allow reset. **Fix:** initialize with `allowReset: true` for environments where reset is required.
 
+## Build and debug local framework changes
 
+`ChromaSwift` normally downloads the published XCFramework from GitHub Releases.
+When iterating on Rust bindings, point the package to a local framework instead of editing the manifest by hand.
 
-## Development & Debugging
+1. Rebuild Swift bindings:
 
-The `ChromaSwift` package normally downloads the published XCFramework from GitHub Releases. When iterating on the Rust bindings you can point the package at your locally built framework without editing the manifest:
+```bash
+cd ../chroma/rust/swift_bindings
+./build_swift_package.sh
+```
 
-1. Rebuild the Swift bindings (from this repo):
-   ```bash
-   cd ../chroma/rust/swift_bindings
-   ./build_swift_package.sh
-   ```
-   This produces `Chroma/chroma_swift_framework.xcframework`.
+This produces `Chroma/chroma_swift_framework.xcframework`.
 
-2. Switch the manifest to the local framework:
-   ```bash
-   ./scripts/use_local_framework.sh
-   ```
+2. Switch manifest to local framework:
 
-3. Build/run your app as usual. When you're ready to return to the published framework, run:
-   ```bash
-   ./scripts/use_release_framework.sh <download-url> <checksum>
-   ```
-   (Pass the URL + checksum from the GitHub release where you uploaded the XCFramework zip.)
+```bash
+./scripts/use_local_framework.sh
+```
 
-### Publishing a new XCFramework (manual)
+3. Build and run your app.
+4. Switch back to release framework when ready:
 
-1. Build the XCFramework as above; the artifact lives at `chroma/rust/swift_bindings/Chroma/chroma_swift_framework.xcframework`.
+```bash
+./scripts/use_release_framework.sh <download-url> <checksum>
+```
+
+Pass the URL and checksum from the GitHub release asset.
+
+## Publish a new XCFramework (manual)
+
+1. Build the XCFramework as above. The artifact path is `chroma/rust/swift_bindings/Chroma/chroma_swift_framework.xcframework`.
 2. Zip it for release:
-   ```bash
-   cd chroma/rust/swift_bindings/Chroma
-   ditto -c -k --sequesterRsrc --keepParent chroma_swift_framework.xcframework chroma_swift_framework.xcframework.zip
-   ```
-3. Compute the checksum from `chroma-swift/`:
-   ```bash
-   swift package compute-checksum ../chroma/rust/swift_bindings/Chroma/chroma_swift_framework.xcframework.zip
-   ```
-4. Upload the zip to a GitHub release and update `Package.swift` with the new URL + checksum from that release (use `./scripts/use_release_framework.sh <url> <checksum>` to rewrite the manifest).
+
+```bash
+cd chroma/rust/swift_bindings/Chroma
+ditto -c -k --sequesterRsrc --keepParent chroma_swift_framework.xcframework chroma_swift_framework.xcframework.zip
+```
+
+3. Compute checksum from `chroma-swift/`:
+
+```bash
+swift package compute-checksum ../chroma/rust/swift_bindings/Chroma/chroma_swift_framework.xcframework.zip
+```
+
+4. Upload zip to GitHub Releases and update `Package.swift` with the new URL and checksum.
+5. Or run:
+
+```bash
+./scripts/use_release_framework.sh <url> <checksum>
+```
 
 These steps keep local debugging and published builds separate without extra automation.
 
+## Demo apps
+
+See [`ChromaDemos/README.md`](ChromaDemos/README.md) for ephemeral, persistent, local-embeddings, and cloud-sync examples.
 
 ## License
 
