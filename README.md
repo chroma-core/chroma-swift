@@ -47,6 +47,36 @@ Chroma is a Swift package that provides a high-performance, cross-platform inter
 import Chroma
 ```
 
+## Install and use the Chroma skill
+
+This repository ships a local skill bundle at:
+
+- `Skill/chroma-swift/`
+
+Copy the `chroma-swift/` directory (not just `SKILL.md`) into one of the skill locations below.
+
+### Install for Codex
+
+Use one of these locations:
+
+- Project scope: `.agents/skills/chroma-swift/`
+- User scope: `~/.agents/skills/chroma-swift/`
+
+### Install for Claude Code
+
+Use one of these locations:
+
+- Project scope: `.claude/skills/chroma-swift/`
+- User scope: `~/.claude/skills/chroma-swift/`
+
+### Invoke the skill in prompts
+
+After installation, refer to the skill by name only:
+
+```text
+Use the chroma skill to review my collection schema and retrieval flow, then propose fixes.
+```
+
 ## Run an end-to-end quick start (Ephemeral)
 
 ### What you'll do
