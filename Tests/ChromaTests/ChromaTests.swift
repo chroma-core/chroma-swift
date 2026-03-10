@@ -56,14 +56,10 @@ struct ChromaTests {
         try ChromaTestEnvironment.setUp()
         let name = uniqueName("info")
         let createdId = try Chroma.createCollection(name: name)
-
-        // FIXME: getCollection(collectionName:) hangs in the FFI binary framework
-        // (both for valid and invalid names). Tests for CollectionInfo are skipped
-        // until this is fixed upstream.
-//        let info = try Chroma.getCollection(collectionName: name)
-//        #expect(info.name == name)
-//        #expect(info.collectionId == createdId)
-//        #expect(info.numDocuments == 0)
+        let info = try Chroma.getCollection(collectionName: name)
+        #expect(info.name == name)
+        #expect(info.collectionId == createdId)
+        #expect(info.numDocuments == 0)
     }
     
     @Test func getCollectionInfoReflectsDocumentCount() throws {
@@ -77,12 +73,8 @@ struct ChromaTests {
             embeddings: [[1, 0, 0], [0, 1, 0]],
             documents: ["one", "two"]
         )
-                
-        // FIXME: getCollection(collectionName:) hangs in the FFI binary framework
-        // (both for valid and invalid names). Tests for CollectionInfo are skipped
-        // until this is fixed upstream.
-//        let info = try Chroma.getCollection(collectionName: name)
-//        #expect(info.numDocuments == 2)
+        let info = try Chroma.getCollection(collectionName: name)
+        #expect(info.numDocuments == 2)
     }
     
     @Test func updateCollectionName() throws {
@@ -123,10 +115,7 @@ struct ChromaTests {
     @Test func getNonexistentCollectionThrows() throws {
         try ChromaTestEnvironment.setUp()
         #expect(throws: (any Error).self) {
-            // FIXME: getCollection(collectionName:) hangs in the FFI binary framework
-            // (both for valid and invalid names). Tests for CollectionInfo are skipped
-            // until this is fixed upstream.
-//            try Chroma.getCollection(collectionName: "nonexistent_\(UUID().uuidString)")
+            try Chroma.getCollection(collectionName: "nonexistent_\(UUID().uuidString)")
         }
     }
     
